@@ -1,6 +1,8 @@
 package T1Base.Learner;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
@@ -27,12 +29,12 @@ public class EntityTypeLearner implements Learner<ESentenceInstance, EntityType>
 		this.mapper=mapper;
 	}
 	public void learn(Collection<ESentenceInstance> trainingData) {
-		int middleLayerSize=25;
+		int middleLayerSize=10;
 		MultiLayerConfiguration config=new NeuralNetConfiguration.Builder()
                 .seed(12345)
                 .iterations(30)
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
-                .learningRate(1e-3)
+                .learningRate(1e-1)
                 .l2(0.001)
                 .list(2)
                 .layer(0, new DenseLayer.Builder().nIn(getFeatures(trainingData.iterator().next()).length()).nOut(middleLayerSize)
@@ -40,9 +42,9 @@ public class EntityTypeLearner implements Learner<ESentenceInstance, EntityType>
                         .updater(Updater.ADAGRAD)
                         .activation("relu").build())
                 .layer(1, new OutputLayer.Builder().nIn(middleLayerSize).nOut(LABEL_VECTOR_LENGTH)
-                        .weightInit(WeightInit.UNIFORM)
+                        .weightInit(WeightInit.ZERO)
                         .updater(Updater.ADAGRAD)
-                        .activation("relu").lossFunction(LossFunctions.LossFunction.SQUARED_LOSS)
+                        .activation("sigmoid").lossFunction(LossFunctions.LossFunction.SQUARED_LOSS)
                         .build())
                 /*.list(3)
                 .layer(0, new DenseLayer.Builder().nIn(ESentenceInstance.FEATURE_VECTOR_LENGTH).nOut(30)
@@ -81,6 +83,11 @@ public class EntityTypeLearner implements Learner<ESentenceInstance, EntityType>
 	
 	private INDArray getFeatures(ESentenceInstance instance){
 		StringFeatures featureExtractor=new StringFeatures(instance.getPart().getPhrase(), instance.getIndex());
+		return getSentenceFeatures(instance).toNDArray();
+	}
+	
+	private SentenceFeatures getSentenceFeatures(ESentenceInstance instance){
+		StringFeatures featureExtractor=new StringFeatures(instance.getPart().getPhrase(), instance.getIndex());
 		return new SentenceFeatures(instance)
 		.AddFeatures(-1, "in", "at", "on", "the", "a", "an", "is", "are", "am", "was", "were", "will", "have", "has", "'ve", "'m", "'s")
 		.AddFeatures(-2, "in", "at", "on", "the", "a", "an", "is", "are", "am", "was", "were", "will", "have", "has", "'ve", "'m", "'s")
@@ -93,7 +100,29 @@ public class EntityTypeLearner implements Learner<ESentenceInstance, EntityType>
 		.AddInRangeFeature(featureExtractor.numLetters(),0,3)
 		.AddInRangeFeature(featureExtractor.numLetters(),4,6)
 		.AddInRangeFeature(featureExtractor.numLetters(),7,Float.MAX_VALUE)
-		.AddFeatures(instance.getPart().getPOSTags()).toArray();
+		.AddFeatures(instance.getPart().getPOSTags())
+		.AddFeatures(instance.getPart().getEntityType().getID()==1)
+		.AddFeatures(instance.getPart().getEntityType().getID()==2)
+		.AddFeatures(instance.getPart().getEntityType().getID()==3)
+		.AddFeatures(instance.getPart().getEntityType().getID()==4)
+		.AddFeatures(instance.getPart().getEntityType().getID()==5)
+		.AddFeatures(1.0f);
+	}
+	
+	private List<INDArray> Batch(List<ESentenceInstance> features, int batchSize){
+		List<INDArray> arrays=new ArrayList<INDArray>();
+		for(int i=0;i<features.size();i+=batchSize){
+			int size=batchSize;
+			if(i+size > features.size()){
+				size=features.size()-i;
+			}
+			float[][] matrix=new float[size][];
+			for(int j=0;j<size;j++){
+				matrix[j]=getSentenceFeatures(features.get(i+j)).toArray();
+			}
+			arrays.add(new NDArray(matrix));
+		}
+		return arrays;
 	}
 
 	private INDArray getLabel(ESentenceInstance instance){

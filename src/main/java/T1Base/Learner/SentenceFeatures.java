@@ -52,13 +52,16 @@ public class SentenceFeatures {
 		}
 		return 0;
 	}
-	
-	public INDArray toArray(){
+
+	public float[] toArray(){
 		float[] featuresArray=new float[features.size()];
 		for(int i=0;i<features.size();i++){
 			featuresArray[i]=features.get(i).floatValue();
 		}
-		return new NDArray(featuresArray);
+		return featuresArray;
+	}
+	public INDArray toNDArray(){
+		return new NDArray(toArray());
 	}
 
 	public SentenceFeatures AddInRangeFeature(float numLetters, float min, float max) {
@@ -83,6 +86,15 @@ public class SentenceFeatures {
 		while(i<3){
 			features.add((float)0);
 			i++;
+		}
+		return this;
+	}
+
+	public SentenceFeatures AddFeatures(boolean b) {
+		if(b){
+			this.features.add(1.0f);
+		}else{
+			this.features.add(0.0f);
 		}
 		return this;
 	}
