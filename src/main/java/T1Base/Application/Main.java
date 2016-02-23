@@ -22,8 +22,8 @@ public class Main {
 		final SentencePropertyMapper mapper=new SentencePropertyMapper();
 		ERRCorporaParser parser=new ERRCorporaParser(mapper);
 		try {
-			//List<Sentence> sentences=parser.parse("conll04.corp");
-			List<Sentence> sentences=parser.parse("all.corp");
+			List<Sentence> sentences=parser.parse("conll04.corp");
+			//List<Sentence> sentences=parser.parse("all.corp");
 			List<ESentenceInstance> instances=getInstances(sentences);
 			System.out.println(sentences.size());
 			System.out.println(instances.size());
@@ -31,6 +31,7 @@ public class Main {
 			System.out.println(evaluator.evaluate(new Factory<Learner<ESentenceInstance,EntityType>>(){
 				public Learner<ESentenceInstance, EntityType> generateNewInstance() {
 					return new EntityTypeLearner(mapper);
+					//return new BaseLineLearner(mapper.getEntity("B-Peop"));
 				}
 			}, instances, 2));
 			System.out.println(mapper.getPOSTags());

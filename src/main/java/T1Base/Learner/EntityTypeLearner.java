@@ -1,6 +1,7 @@
 package T1Base.Learner;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -42,29 +43,22 @@ public class EntityTypeLearner implements Learner<ESentenceInstance, EntityType>
                         .updater(Updater.ADAGRAD)
                         .activation("relu").build())
                 .layer(1, new OutputLayer.Builder().nIn(middleLayerSize).nOut(LABEL_VECTOR_LENGTH)
-                        .weightInit(WeightInit.ZERO)
+                        .weightInit(WeightInit.XAVIER)
                         .updater(Updater.ADAGRAD)
-                        .activation("sigmoid").lossFunction(LossFunctions.LossFunction.SQUARED_LOSS)
+                        .activation("softmax").lossFunction(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
                         .build())
-                /*.list(3)
-                .layer(0, new DenseLayer.Builder().nIn(ESentenceInstance.FEATURE_VECTOR_LENGTH).nOut(30)
-                        .weightInit(WeightInit.XAVIER)
-                        .updater(Updater.ADAGRAD)
-                        .activation("relu").build())
-                .layer(1, new DenseLayer.Builder().nIn(30).nOut(10)
-                        .weightInit(WeightInit.XAVIER)
-                        .updater(Updater.ADAGRAD)
-                        .activation("relu").build())
-                .layer(2, new OutputLayer.Builder().nIn(10).nOut(ESentenceInstance.LABEL_VECTOR_LENGTH)
-                        .weightInit(WeightInit.XAVIER)
-                        .updater(Updater.ADAGRAD)
-                        .activation("relu").lossFunction(LossFunctions.LossFunction.MSE)
-                        .build())*/
                 .pretrain(false).backprop(true)
                 .build();
 		network=new MultiLayerNetwork(config);
-		for(ESentenceInstance i : trainingData){
+		List<INDArray> inputs=this.Batch(new ArrayList<ESentenceInstance>(trainingData), 1000);
+		List<INDArray> labels=this.BatchLabels(new ArrayList<ESentenceInstance>(trainingData), 1000);
+		/*for(ESentenceInstance i : trainingData){
 			network.fit(getFeatures(i), getLabel(i));
+		}*/
+		for(int times=0;times<50;times++){
+			for(int i=0;i<inputs.size();i++){
+				network.fit(inputs.get(i), labels.get(i));
+			}
 		}
 	}
 
@@ -124,10 +118,29 @@ public class EntityTypeLearner implements Learner<ESentenceInstance, EntityType>
 		}
 		return arrays;
 	}
+	private List<INDArray> BatchLabels(List<ESentenceInstance> features, int batchSize){
+		List<INDArray> arrays=new ArrayList<INDArray>();
+		for(int i=0;i<features.size();i+=batchSize){
+			int size=batchSize;
+			if(i+size > features.size()){
+				size=features.size()-i;
+			}
+			float[][] matrix=new float[size][];
+			for(int j=0;j<size;j++){
+				matrix[j]=getSentenceLabels(features.get(i+j));
+			}
+			arrays.add(new NDArray(matrix));
+		}
+		return arrays;
+	}
 
 	private INDArray getLabel(ESentenceInstance instance){
+		return new NDArray(getSentenceLabels(instance));
+	}
+
+	private float[] getSentenceLabels(ESentenceInstance instance){
 		float[] labels=new float[LABEL_VECTOR_LENGTH];
 		labels[instance.getPart().getEntityType().getID()-1]=1.0f;
-		return new NDArray(labels);
+		return labels;
 	}
 }
