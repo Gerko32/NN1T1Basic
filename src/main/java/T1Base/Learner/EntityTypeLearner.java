@@ -20,14 +20,17 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 import T1Base.Application.ESentenceInstance;
 import T1Base.Parser.EntityType;
 import T1Base.Parser.SentencePropertyMapper;
+import T1Base.Parser.Statistics;
 import gerkosoft.MLEvaluation.Interfaces.Learner;
 
 public class EntityTypeLearner implements Learner<ESentenceInstance, EntityType> {
 	private static final int LABEL_VECTOR_LENGTH=4;
 	private MultiLayerNetwork network;
 	private SentencePropertyMapper mapper;
-	public EntityTypeLearner(SentencePropertyMapper mapper){
+	private Statistics statistics;
+	public EntityTypeLearner(SentencePropertyMapper mapper, Statistics statistics){
 		this.mapper=mapper;
+		this.statistics=statistics;
 	}
 	public void learn(Collection<ESentenceInstance> trainingData) {
 		int middleLayerSize=10;
@@ -87,8 +90,9 @@ public class EntityTypeLearner implements Learner<ESentenceInstance, EntityType>
 		.AddFeatures(-2, "in", "at", "on", "the", "a", "an", "is", "are", "am", "was", "were", "will", "have", "has", "'ve", "'m", "'s")
 		.AddFeatures(+1, "is", "are", "am", "was", "were", "will", "have", "has", "'ve", "'m", "'s")
 		.AddFeatures(+2, "is", "are", "am", "was", "were", "will", "have", "has")
-		.AddFeatures(featureExtractor.countCapitals(), featureExtractor.firstCapital(), featureExtractor.numLetters())
-		.AddFeatures(featureExtractor.numNumbers(), featureExtractor.numWords(), featureExtractor.countPunctuation())
+		.AddFeatures(featureExtractor.firstCapital())
+		//.AddFeatures(featureExtractor.countCapitals(), featureExtractor.numLetters())
+		//.AddFeatures(featureExtractor.numNumbers(), featureExtractor.numWords(), featureExtractor.countPunctuation())
 		.AddHasPOSTagStarting(+1, "vb")
 		.AddHasPOSTagStarting(-1, "jj")
 		.AddInRangeFeature(featureExtractor.numLetters(),0,3)
